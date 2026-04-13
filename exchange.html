@@ -136,22 +136,28 @@ let krwPerJpy = null;
 let busy = false;
 
 async function fetchRate() {
-  try {
-    const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.json');
-    const data = await res.json();
-    krwPerJpy = data.jpy.krw;
-    const jpyPerKrw = (1 / krwPerJpy).toFixed(4);
-    document.getElementById('rate-info').textContent =
-      `1엔 = ${krwPerJpy.toFixed(2)}원 · 1원 = ${jpyPerKrw}엔`;
-    const now = new Date();
-    document.getElementById('updated').textContent =
-      `기준: ${now.toLocaleDateString('ko-KR')} ${now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}`;
-  } catch(e) {
-    document.getElementById('rate-info').textContent = '환율 로드 실패';
-    const err = document.getElementById('error');
-    err.textContent = '환율을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.';
-    err.style.display = 'block';
+  const urls = [
+    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.json',
+    'https://latest.currency-api.pages.dev/v1/currencies/jpy.json'
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      krwPerJpy = data.jpy.krw;
+      const jpyPerKrw = (1 / krwPerJpy).toFixed(4);
+      document.getElementById('rate-info').textContent =
+        `1엔 = ${krwPerJpy.toFixed(2)}원 · 1원 = ${jpyPerKrw}엔`;
+      const now = new Date();
+      document.getElementById('updated').textContent =
+        `기준: ${now.toLocaleDateString('ko-KR')} ${now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}`;
+      return;
+    } catch(e) {}
   }
+  document.getElementById('rate-info').textContent = '환율 로드 실패';
+  const err = document.getElementById('error');
+  err.textContent = '환율을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.';
+  err.style.display = 'block';
 }
 
 document.getElementById('krw').addEventListener('input', function() {
