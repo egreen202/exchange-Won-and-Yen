@@ -23,82 +23,30 @@
     max-width: 400px;
     box-shadow: 0 2px 16px rgba(0,0,0,0.08);
   }
-  h1 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #111;
-    margin-bottom: 4px;
-  }
+  h1 { font-size: 18px; font-weight: 600; color: #111; margin-bottom: 4px; }
   .rate-badge {
-    font-size: 12px;
-    color: #888;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    font-size: 12px; color: #888; margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 5px;
   }
-  .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #3B6D11;
-    flex-shrink: 0;
-  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #3B6D11; flex-shrink: 0; }
   .field {
-    background: #f9f9f7;
-    border: 1px solid #e8e8e4;
-    border-radius: 14px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 10px;
+    background: #f9f9f7; border: 1px solid #e8e8e4;
+    border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 10px;
   }
   .field label {
-    font-size: 11px;
-    color: #999;
-    display: block;
-    margin-bottom: 6px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-size: 11px; color: #999; display: block;
+    margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase;
   }
-  .field-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .field-row { display: flex; align-items: center; gap: 8px; }
   .field-row input {
-    flex: 1;
-    font-size: 28px;
-    font-weight: 600;
-    border: none;
-    background: transparent;
-    color: #111;
-    outline: none;
-    min-width: 0;
+    flex: 1; font-size: 28px; font-weight: 600;
+    border: none; background: transparent; color: #111; outline: none; min-width: 0;
   }
   .field-row input::placeholder { color: #ccc; font-weight: 400; }
-  .field-row .unit {
-    font-size: 16px;
-    font-weight: 600;
-    color: #bbb;
-  }
-  .divider {
-    text-align: center;
-    color: #ccc;
-    font-size: 20px;
-    margin: 2px 0;
-    cursor: default;
-    user-select: none;
-  }
-  .error {
-    font-size: 13px;
-    color: #e24b4a;
-    margin-top: 12px;
-    text-align: center;
-  }
-  .updated {
-    font-size: 11px;
-    color: #bbb;
-    text-align: right;
-    margin-top: 12px;
-  }
+  .field-row .unit { font-size: 16px; font-weight: 600; color: #bbb; }
+  .divider { text-align: center; color: #ccc; font-size: 20px; margin: 2px 0; }
+  .error { font-size: 13px; color: #e24b4a; margin-top: 12px; text-align: center; }
+  .updated { font-size: 11px; color: #bbb; text-align: right; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -108,7 +56,6 @@
     <span class="dot"></span>
     <span id="rate-info">환율 불러오는 중...</span>
   </div>
-
   <div class="field">
     <label>한국 원 KRW</label>
     <div class="field-row">
@@ -116,9 +63,7 @@
       <span class="unit">₩</span>
     </div>
   </div>
-
   <div class="divider">⇅</div>
-
   <div class="field">
     <label>일본 엔 JPY</label>
     <div class="field-row">
@@ -126,7 +71,6 @@
       <span class="unit">¥</span>
     </div>
   </div>
-
   <div id="error" class="error" style="display:none;"></div>
   <div id="updated" class="updated"></div>
 </div>
@@ -136,27 +80,45 @@ let krwPerJpy = null;
 let busy = false;
 
 async function fetchRate() {
-  const urls = [
-    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.json',
-    'https://latest.currency-api.pages.dev/v1/currencies/jpy.json'
+  const apis = [
+    async () => {
+      const r = await fetch('https://latest.currency-api.pages.dev/v1/currencies/jpy.json');
+      const d = await r.json();
+      return d.jpy.krw;
+    },
+    async () => {
+      const r = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.json');
+      const d = await r.json();
+      return d.jpy.krw;
+    },
+    async () => {
+      const r = await fetch('https://open.er-api.com/v6/latest/JPY');
+      const d = await r.json();
+      return d.rates.KRW;
+    }
   ];
-  for (const url of urls) {
+
+  for (const api of apis) {
     try {
-      const res = await fetch(url);
-      const data = await res.json();
-      krwPerJpy = data.jpy.krw;
-      const jpyPerKrw = (1 / krwPerJpy).toFixed(4);
-      document.getElementById('rate-info').textContent =
-        `1엔 = ${krwPerJpy.toFixed(2)}원 · 1원 = ${jpyPerKrw}엔`;
-      const now = new Date();
-      document.getElementById('updated').textContent =
-        `기준: ${now.toLocaleDateString('ko-KR')} ${now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}`;
-      return;
-    } catch(e) {}
+      const rate = await api();
+      if (rate && rate > 0) {
+        krwPerJpy = rate;
+        const jpyPerKrw = (1 / krwPerJpy).toFixed(4);
+        document.getElementById('rate-info').textContent =
+          `1엔 = ${krwPerJpy.toFixed(2)}원 · 1원 = ${jpyPerKrw}엔`;
+        const now = new Date();
+        document.getElementById('updated').textContent =
+          `기준: ${now.toLocaleDateString('ko-KR')} ${now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}`;
+        return;
+      }
+    } catch(e) {
+      console.log('API 실패, 다음 시도:', e);
+    }
   }
+
   document.getElementById('rate-info').textContent = '환율 로드 실패';
   const err = document.getElementById('error');
-  err.textContent = '환율을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.';
+  err.textContent = '환율을 불러오지 못했습니다. 잠시 후 새로고침해주세요.';
   err.style.display = 'block';
 }
 
