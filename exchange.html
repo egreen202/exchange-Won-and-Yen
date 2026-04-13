@@ -45,25 +45,52 @@
   .field-row input::placeholder { color: #ccc; font-weight: 400; }
   .field-row .unit { font-size: 16px; font-weight: 600; color: #bbb; }
   .divider { text-align: center; color: #ccc; font-size: 20px; margin: 2px 0; }
+
+  .section-title {
+    font-size: 12px; font-weight: 600; color: #999;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin: 1.5rem 0 0.75rem;
+  }
+  .split-field {
+    background: #f0f7ff; border: 1px solid #d0e6ff;
+    border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 10px;
+  }
+  .split-field label {
+    font-size: 11px; color: #7aabdd; display: block;
+    margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .split-field .field-row input { color: #1a6abf; }
+  .split-field .unit { color: #7aabdd; }
+
+  .split-result {
+    background: #f0f7ff; border: 1px solid #d0e6ff;
+    border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 10px;
+    display: none;
+  }
+  .split-result label {
+    font-size: 11px; color: #7aabdd; display: block;
+    margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .split-result .result-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .split-result .result-row .r-label { font-size: 13px; color: #999; }
+  .split-result .result-row .r-val { font-size: 22px; font-weight: 600; color: #1a6abf; }
+  .split-result .result-row .r-unit { font-size: 14px; color: #7aabdd; margin-left: 4px; }
+
   .error { font-size: 13px; color: #e24b4a; margin-top: 12px; text-align: center; }
   .updated { font-size: 11px; color: #bbb; text-align: right; margin-top: 12px; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>원 ⇅ 엔</h1>
+  <h1>엔 ⇅ 원</h1>
   <div class="rate-badge">
     <span class="dot"></span>
     <span id="rate-info">환율 불러오는 중...</span>
   </div>
-  <div class="field">
-    <label>한국 원 KRW</label>
-    <div class="field-row">
-      <input type="number" id="krw" placeholder="0" min="0" />
-      <span class="unit">₩</span>
-    </div>
-  </div>
-  <div class="divider">⇅</div>
+
   <div class="field">
     <label>일본 엔 JPY</label>
     <div class="field-row">
@@ -71,6 +98,45 @@
       <span class="unit">¥</span>
     </div>
   </div>
+
+  <div class="divider">⇅</div>
+
+  <div class="field">
+    <label>한국 원 KRW</label>
+    <div class="field-row">
+      <input type="number" id="krw" placeholder="0" min="0" />
+      <span class="unit">₩</span>
+    </div>
+  </div>
+
+  <div class="section-title">엔빵</div>
+
+  <div class="split-field">
+    <label>인원수</label>
+    <div class="field-row">
+      <input type="number" id="people" placeholder="0" min="1" />
+      <span class="unit">명</span>
+    </div>
+  </div>
+
+  <div class="split-result" id="split-result">
+    <label>1인당 금액</label>
+    <div class="result-row">
+      <span class="r-label">엔</span>
+      <div>
+        <span class="r-val" id="split-jpy">0</span>
+        <span class="r-unit">¥</span>
+      </div>
+    </div>
+    <div class="result-row">
+      <span class="r-label">원</span>
+      <div>
+        <span class="r-val" id="split-krw">0</span>
+        <span class="r-unit">₩</span>
+      </div>
+    </div>
+  </div>
+
   <div id="error" class="error" style="display:none;"></div>
   <div id="updated" class="updated"></div>
 </div>
@@ -111,9 +177,7 @@ async function fetchRate() {
           `기준: ${now.toLocaleDateString('ko-KR')} ${now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}`;
         return;
       }
-    } catch(e) {
-      console.log('API 실패, 다음 시도:', e);
-    }
+    } catch(e) {}
   }
 
   document.getElementById('rate-info').textContent = '환율 로드 실패';
@@ -122,13 +186,23 @@ async function fetchRate() {
   err.style.display = 'block';
 }
 
-document.getElementById('krw').addEventListener('input', function() {
-  if (!krwPerJpy || busy) return;
-  busy = true;
-  const v = parseFloat(this.value);
-  document.getElementById('jpy').value = isNaN(v) ? '' : (v / krwPerJpy).toFixed(2);
-  busy = false;
-});
+function updateSplit() {
+  const jpyVal = parseFloat(document.getElementById('jpy').value);
+  const people = parseInt(document.getElementById('people').value);
+  const result = document.getElementById('split-result');
+
+  if (!krwPerJpy || isNaN(jpyVal) || isNaN(people) || people < 1 || jpyVal <= 0) {
+    result.style.display = 'none';
+    return;
+  }
+
+  const perJpy = jpyVal / people;
+  const perKrw = perJpy * krwPerJpy;
+
+  document.getElementById('split-jpy').textContent = Math.ceil(perJpy).toLocaleString('ko-KR');
+  document.getElementById('split-krw').textContent = Math.ceil(perKrw).toLocaleString('ko-KR');
+  result.style.display = 'block';
+}
 
 document.getElementById('jpy').addEventListener('input', function() {
   if (!krwPerJpy || busy) return;
@@ -136,7 +210,19 @@ document.getElementById('jpy').addEventListener('input', function() {
   const v = parseFloat(this.value);
   document.getElementById('krw').value = isNaN(v) ? '' : Math.round(v * krwPerJpy);
   busy = false;
+  updateSplit();
 });
+
+document.getElementById('krw').addEventListener('input', function() {
+  if (!krwPerJpy || busy) return;
+  busy = true;
+  const v = parseFloat(this.value);
+  document.getElementById('jpy').value = isNaN(v) ? '' : (v / krwPerJpy).toFixed(2);
+  busy = false;
+  updateSplit();
+});
+
+document.getElementById('people').addEventListener('input', updateSplit);
 
 fetchRate();
 </script>
