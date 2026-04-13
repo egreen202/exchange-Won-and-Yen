@@ -137,7 +137,7 @@ let busy = false;
 
 async function fetchRate() {
   try {
-    const res = await fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW');
+    const res = await fetch('https://open.er-api.com/v6/latest/JPY');
     const data = await res.json();
     krwPerJpy = data.rates.KRW;
     const jpyPerKrw = (1 / krwPerJpy).toFixed(4);
