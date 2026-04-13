@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>원 ⇅ 엔 환율 계산기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 4px;
+  }
+  .rate-badge {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #3B6D11;
+    flex-shrink: 0;
+  }
+  .field {
+    background: #f9f9f7;
+    border: 1px solid #e8e8e4;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 10px;
+  }
+  .field label {
+    font-size: 11px;
+    color: #999;
+    display: block;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .field-row input {
+    flex: 1;
+    font-size: 28px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: #111;
+    outline: none;
+    min-width: 0;
+  }
+  .field-row input::placeholder { color: #ccc; font-weight: 400; }
+  .field-row .unit {
+    font-size: 16px;
+    font-weight: 600;
+    color: #bbb;
+  }
+  .divider {
+    text-align: center;
+    color: #ccc;
+    font-size: 20px;
+    margin: 2px 0;
+    cursor: default;
+    user-select: none;
+  }
+  .error {
+    font-size: 13px;
+    color: #e24b4a;
+    margin-top: 12px;
+    text-align: center;
+  }
+  .updated {
+    font-size: 11px;
+    color: #bbb;
+    text-align: right;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>원 ⇅ 엔</h1>
+  <div class="rate-badge">
+    <span class="dot"></span>
+    <span id="rate-info">환율 불러오는 중...</span>
+  </div>
+
+  <div class="field">
+    <label>한국 원 KRW</label>
+    <div class="field-row">
+      <input type="number" id="krw" placeholder="0" min="0" />
+      <span class="unit">₩</span>
+    </div>
+  </div>
+
+  <div class="divider">⇅</div>
+
+  <div class="field">
+    <label>일본 엔 JPY</label>
+    <div class="field-row">
+      <input type="number" id="jpy" placeholder="0" min="0" />
+      <span class="unit">¥</span>
+    </div>
+  </div>
+
+  <div id="error" class="error" style="display:none;"></div>
+  <div id="updated" class="updated"></div>
+</div>
+
+<script>
+let krwPerJpy = null;
+let busy = false;
+
+async function fetchRate() {
+  try {
+    const res = await fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW');
+    const data = await res.json();
+    krwPerJpy = data.rates.KRW;
+    const jpyPerKrw = (1 / krwPerJpy).toFixed(4);
+    document.getElementById('rate-info').textContent =
+      `1엔 = ${krwPerJpy.toFixed(2)}원 · 1원 = ${jpyPerKrw}엔`;
+    const now = new Date();
+    document.getElementById('updated').textContent =
+      `기준: ${now.toLocaleDateString('ko-KR')} ${now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'})}`;
+  } catch(e) {
+    document.getElementById('rate-info').textContent = '환율 로드 실패';
+    const err = document.getElementById('error');
+    err.textContent = '환율을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.';
+    err.style.display = 'block';
+  }
+}
+
+document.getElementById('krw').addEventListener('input', function() {
+  if (!krwPerJpy || busy) return;
+  busy = true;
+  const v = parseFloat(this.value);
+  document.getElementById('jpy').value = isNaN(v) ? '' : (v / krwPerJpy).toFixed(2);
+  busy = false;
+});
+
+document.getElementById('jpy').addEventListener('input', function() {
+  if (!krwPerJpy || busy) return;
+  busy = true;
+  const v = parseFloat(this.value);
+  document.getElementById('krw').value = isNaN(v) ? '' : Math.round(v * krwPerJpy);
+  busy = false;
+});
+
+fetchRate();
+</script>
+</body>
+</html>
